@@ -1,6 +1,5 @@
 from typing import List
-from datetime import datetime, date, timedelta
-import numpy as np
+from datetime import datetime, timedelta,date
 import pandas as pd
 
 CONFIRMED_CASES_URL = f"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data" \
@@ -14,21 +13,28 @@ confirmed_cases = pd.read_csv(CONFIRMED_CASES_URL, error_bad_lines=False)
 
 
 def poland_cases_by_date(day: int, month: int, year: int = 2020) -> int:
-        url = f"https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv"
-        df = pd.read_csv(url, error_bad_lines=False)
-        result = df.loc[df["Country/Region"]=="Poland"][f"{month}/{day}/{year-2000}"].values[0]
-        return result
+    
+  result = confirmed_cases[confirmed_cases["Country/Region"] == "Poland"].iloc[-1][f"{month}/{day}/{year%2000}"]
+  return result
+
+
 
 def top5_countries_by_date(day: int, month: int, year: int = 2020) -> List[str]:
-        data=f"{month}/{day}/20"
-        result=confirmed_cases[[data,'Country/Region']]
-        result=result.groupby('Country/Region').sum()
-        result=result.sort_values(by=[data], ascending=False).head(5)
-        return result.index.tolist()
-  
+    
+   data = f"{month}/{day}/{year%2000}"
+   df = confirmed_cases[["Province/State", "Country/Region", data]].groupby("Country/Region").sum().sort_values(by=data, ascending=False)
+   return list(df[0:5].index.values.astype(str))
+    
+
+
 def no_new_cases_count(day: int, month: int, year: int = 2020) -> int:
-        data=f"{month}/{day}/{year-2000}"
-        thedata=date(year,month,day)
-        prevday= thedata - timedelta(days=1)
-        pdata=prevday.strftime('%-m/%-d/%y')
-        return int(confirmed_cases[confirmed_cases[data] != confirmed_cases[pdata]][data].count())
+    
+    today = date(year,month,day)
+    previous = today - timedelta(days=1)
+
+    today_date = f"{month}/{day}/{year%2000}"
+    previous_date = f"{previous.month}/{previous.day}/{previous.year%2000}"
+    
+    df = confirmed_cases[confirmed_cases[today_date] > confirmed_cases[previous_date]]
+    return len(df)
+
